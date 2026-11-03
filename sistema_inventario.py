@@ -26,17 +26,9 @@ class Producto:
         if not math.isfinite(precio) or precio < 0:
             raise ValueError("El precio debe ser un número finito mayor o igual que cero.")
 
-        try:
-            cantidad = int(cantidad)
-        except (TypeError, ValueError):
-            raise ValueError("La cantidad debe ser un número entero válido.") from None
-
-        if cantidad < 0:
-            raise ValueError("La cantidad debe ser mayor o igual a cero.")
-
         self.nombre = nombre
         self.precio = precio
-        self.cantidad = cantidad
+        self.cantidad = _parse_cantidad(cantidad)
 
     def actualizar_precio(self, nuevo_precio):
         """
@@ -68,17 +60,7 @@ class Producto:
         Raises:
             ValueError: Si la nueva cantidad no es un número entero mayor o igual que cero.
         """
-        try:
-            if isinstance(nueva_cantidad, bool):
-                raise ValueError
-            nueva_cantidad = int(nueva_cantidad)
-        except (TypeError, ValueError):
-            raise ValueError("La cantidad debe ser un número entero válido.") from None
-
-        if nueva_cantidad < 0:
-            raise ValueError("La cantidad debe ser mayor o igual a cero.")
-
-        self.cantidad = nueva_cantidad
+        self.cantidad = _parse_cantidad(nueva_cantidad)
 
     def calcular_valor_total(self):
         return self.precio * self.cantidad
@@ -86,7 +68,7 @@ class Producto:
     def __str__(self):
         return (
             f"{self.nombre} | Precio: ${self.precio:.2f} | "
-            f"Cantidad: {self.cantidad} | Total: ${self.calcular_valor_total()}"
+            f"Cantidad: {self.cantidad} | Total: ${self.calcular_valor_total():.2f}"
         )
 
 
@@ -119,6 +101,24 @@ class Inventario:
         for i, producto in enumerate(self.productos, start=1):
             print(f"{i}. {producto}")
 
+def _parse_cantidad(cantidad):
+    if isinstance(cantidad, bool):
+        raise ValueError("La cantidad debe ser un número entero válido.")
+
+    try:
+        valor = float(cantidad)
+    except (TypeError, ValueError):
+        raise ValueError("La cantidad debe ser un número entero válido.") from None
+
+    if not math.isfinite(valor) or not valor.is_integer():
+        raise ValueError("La cantidad debe ser un número entero válido.")
+
+    cantidad = int(valor)
+    if cantidad < 0:
+        raise ValueError("La cantidad debe ser mayor o igual a cero.")
+
+    return cantidad
+
 def limpiar_pantalla():
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -127,21 +127,47 @@ def pausar():
 
 def opcion_agregar(inventario):
     while True:
-        try:
-            nombre = input("Nombre del producto (o 'q' para el menú): ").strip()
-            if nombre.lower() == "q":
-                return
-
-            precio = input("Precio: ").strip()
-            cantidad = input("Cantidad: ").strip()
-            producto = Producto(nombre, precio, cantidad)
-            inventario.agregar_producto(producto)
-            print(f"Producto '{producto.nombre}' agregado correctamente.")
+        nombre = input("Nombre del producto (o 'q' para el menú): ").strip()
+        if nombre.lower() == "q":
             return
-        except (ValueError, TypeError) as e:
-            print(f"Error al agregar producto: {e}")
-            print("Intente nuevamente o escriba 'q' en el nombre.")
+        if not nombre:
+            print("El nombre no puede estar vacío. Intente nuevamente.")
+            continue
+        if inventario.buscar_producto(nombre) is not None:
+            print(f"Ya existe un producto con el nombre '{nombre}'. Intente con otro.")
+            continue
+        break
 
+    while True:
+        precio_ingresado = input("Precio (o 'q' para el menú): ").strip()
+        if precio_ingresado.lower() == "q":
+            return
+        try:
+            precio = float(precio_ingresado)
+        except ValueError:
+            print("El precio debe ser un número válido. Intente nuevamente.")
+            continue
+        if not math.isfinite(precio) or precio < 0:
+            print("El precio debe ser un número finito mayor o igual que cero. Intente nuevamente.")
+            continue
+        break
+
+    while True:
+        cantidad_ingresada = input("Cantidad (o 'q' para el menú): ").strip()
+        if cantidad_ingresada.lower() == "q":
+            return
+        try:
+            cantidad = _parse_cantidad(cantidad_ingresada)
+            break
+        except ValueError as e:
+            print(f"{e} Intente nuevamente.")
+
+    try:
+        producto = Producto(nombre, precio, cantidad)
+        inventario.agregar_producto(producto)
+        print(f"Producto '{producto.nombre}' agregado correctamente.")
+    except (ValueError, TypeError) as e:
+        print(f"Error al agregar producto: {e}")
 
 def opcion_buscar(inventario):
     while True:
@@ -202,6 +228,7 @@ def menu_principal(inventario):
 
         elif opcion == "5":
             print("¡Hasta luego!")
+            pausar()
             break
 
         else:

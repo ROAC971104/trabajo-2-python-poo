@@ -14,9 +14,12 @@ class Producto:
         Raises:
             ValueError: Si el nombre está vacío, el precio no es un número mayor o igual que cero, o la cantidad no es un número entero mayor o igual que cero.
         """
-        nombre = str(nombre).strip()
+
+        nombre = nombre.strip()
         if not nombre:
             raise ValueError("El nombre no puede estar vacío.")
+        if nombre.lower() == "none":
+            raise ValueError("El nombre no puede ser 'None'.")
 
         try:
             precio = float(precio)
@@ -132,6 +135,9 @@ def opcion_agregar(inventario):
             return
         if not nombre:
             print("El nombre no puede estar vacío. Intente nuevamente.")
+            continue
+        if nombre.lower() == "none":
+            print("El nombre no puede ser 'None'. Intente nuevamente.")
             continue
         if inventario.buscar_producto(nombre) is not None:
             print(f"Ya existe un producto con el nombre '{nombre}'. Intente con otro.")
